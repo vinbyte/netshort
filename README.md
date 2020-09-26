@@ -2,7 +2,7 @@
 
 ## Overview
 
-**netshort** is a Netlify shortener build using Go. Inspired by [netlify-shortener](https://github.com/kentcdodds/netlify-shortener).
+**netshort** is a Netlify url shortener build using Go. Inspired by [netlify-shortener](https://github.com/kentcdodds/netlify-shortener). You can build your own url shortener using Github and Netlify.
 
 ## Why
 
@@ -71,6 +71,7 @@ This used for listing your link. It will read all your link in **_redirects** fi
 
 ## Tips
 
-You can combine with [telegram-bot](https://github.com/botgram/shell-bot) to execute via telegram chat. So, you can shorten link anywhere, anytime only using a telegram app.
+- Buy a short domain to use on Netlify
+- You can combine with [telegram-bot](https://github.com/botgram/shell-bot) to execute via telegram chat. So, you can shorten link anywhere, anytime using a telegram app.
 Demo :
 ![netshort-telegram-demo](netshort-telegram-demo.gif)
