@@ -49,7 +49,7 @@ But if you don't mind to use the current global git config, you can skip this st
 
 ## Install
 
-- Get the binary
+- Download the binary [here](https://github.com/rabbitmeow/netshort/releases)
 - If you are using macOS/Linux, you can move the binary to `/usr/local/bin` to make it global to access
 
 ## Command
