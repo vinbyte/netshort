@@ -49,12 +49,22 @@ But if you don't mind to use the current global git config, you can skip this st
 
 ## Install
 
-- Download the binary [here](https://github.com/rabbitmeow/netshort/releases)
-- If you are using macOS/Linux, you can move the binary to `/usr/local/bin` to make it global to access
+1. Download the binary [here](https://github.com/rabbitmeow/netshort/releases)
+2. For macOS/Linux change permission of binary. Example :
+`chmod +x netshort_darwin_amd64`
+3. Additional step for macOS Catalina :
+
+- Go to your download folder, right click the file. Then choose "Open"
+- A popup will appear, click the "Open" button
+- Close the terminal
+
+4. If you are using macOS/Linux, you can move the binary to `/usr/local/bin` to make it global to access. Example :
+`mv ./netshort_darwin_amd64 /usr/local/bin/netshort`
+5. **netshort** ready to use
 
 ## Command
 
-- `shorten add [long_url] [custom_short_link]`
+- `netshort shorten [long_url] [custom_short_link]`
 This used for add the url to your **_redirect** file in your app directory (defined in config file). The second args is optional. **netshort** will generate for you if you don't have the second args
-- `shorten list`
+- `netshort list`
 This used for listing your link. It will read all your link in **_redirects** file
