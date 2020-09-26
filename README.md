@@ -73,4 +73,4 @@ This used for listing your link. It will read all your link in **_redirects** fi
 
 You can combine with [telegram-bot](https://github.com/botgram/shell-bot) to execute via telegram chat. So, you can shorten link anywhere, anytime only using a telegram app.
 Demo :
-![netshort-telegram-demo](https://api.monosnap.com/file/download?id=7M0NULpN5OfJebzx6TMB4BrVZTek7Q)
+![netshort-telegram-demo](netshort-telegram-demo.gif)
