@@ -68,3 +68,9 @@ But if you don't mind to use the current global git config, you can skip this st
 This used for add the url to your **_redirect** file in your app directory (defined in config file). The second args is optional. **netshort** will generate for you if you don't have the second args
 - `netshort list`
 This used for listing your link. It will read all your link in **_redirects** file
+
+## Tips
+
+You can combine with [telegram-bot](https://github.com/botgram/shell-bot) to execute via telegram chat. So, you can shorten link anywhere, anytime only using a telegram app.
+Demo :
+![netshort-telegram-demo](https://api.monosnap.com/file/download?id=7M0NULpN5OfJebzx6TMB4BrVZTek7Q)
