@@ -1,0 +1,6 @@
+# Your app directory (without trailing slash)
+app: 
+  path: /Users/gavinda/Documents/Project/my-projects/shortener
+# The short link length
+shortlink:
+  length: 5
