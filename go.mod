@@ -1,4 +1,4 @@
-module github.com/rabbitmeow/netshort
+module github.com/vinbyte/netshort
 
 go 1.14
 

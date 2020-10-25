@@ -49,7 +49,7 @@ But if you don't mind to use the current global git config, you can skip this st
 
 ## Install
 
-1. Download the binary [here](https://github.com/rabbitmeow/netshort/releases)
+1. Download the binary [here](https://github.com/vinbyte/netshort/releases)
 2. For macOS/Linux change permission of binary. Example :
 `chmod +x netshort_darwin_amd64`
 3. Additional step for macOS Catalina :

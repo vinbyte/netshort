@@ -21,8 +21,8 @@ THE SOFTWARE.
 */
 package main
 
-import "github.com/rabbitmeow/netshort/cmd"
+import "github.com/vinbyte/netshort/cmd"
 
 func main() {
-  cmd.Execute()
+	cmd.Execute()
 }
