@@ -122,7 +122,7 @@ func readFile(checkIsDuplicate bool, shortlink string, isAutoRegenerateLink bool
 				isDuplicate = true
 				file.Close()
 				if isAutoRegenerateLink {
-					ShortLink = generateShortLink(linkLength)
+					ShortLink = randomizeShortLink(linkLength)
 					readFile(checkIsDuplicate, ShortLink, isAutoRegenerateLink)
 				}
 				break

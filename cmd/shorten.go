@@ -24,6 +24,7 @@ package cmd
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net/url"
@@ -48,6 +49,16 @@ var linkLength int
 var letters = []rune("1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 var isAlphaNum = regexp.MustCompile(`^[a-zA-Z0-9]+$`).MatchString
 
+const (
+	ErrInvalidURL           = "URL not valid"
+	ErrRedirectFileNotFound = "_redirect file does not exist (or is a directory)"
+	ErrAlphanumericOnly     = "short link is alphanumeric only"
+	ErrShortLinkExist       = "Your short link already exist"
+	ErrNoWhitespaceAtLine   = "no whitespace detected at _redirects file line %d"
+
+	AdditionalWhitespaceLength = 10
+)
+
 // shortenCmd represents the shorten command
 var shortenCmd = &cobra.Command{
 	Use:   "shorten <long_url> <custom_short_link>",
@@ -66,79 +77,34 @@ This will use /goo as a short link.`,
 	Args:                  cobra.MinimumNArgs(1),
 	DisableFlagsInUseLine: true,
 	Run: func(cmd *cobra.Command, args []string) {
-		LongURL = args[0]
-		if !isValidURL(LongURL) {
-			fmt.Println("URL not valid")
+		// validating args
+		err := validateParam(args)
+		if err != nil {
+			fmt.Println(err)
 			os.Exit(1)
 		}
-		if !checkAppDir() {
-			fmt.Println("_redirect file does not exist (or is a directory)")
+
+		isAutoGenerateShortLink, err := generateShortLink(args)
+		if err != nil {
+			fmt.Println(err)
 			os.Exit(1)
 		}
-		isAutoRegenerateLink := false
-		if len(args) > 1 {
-			if !isAlphaNum(args[1]) {
-				fmt.Println("Short link is alphanumeric only")
-				os.Exit(1)
-			}
-			ShortLink = args[1]
-		} else {
-			linkLength = 5
-			if viper.GetInt("shortlink.length") != 0 {
-				linkLength = viper.GetInt("shortlink.length")
-			}
-			ShortLink = generateShortLink(linkLength)
-			isAutoRegenerateLink = true
-		}
+
 		// start prepend to _redirects file
-		isDuplicate := readFile(true, ShortLink, isAutoRegenerateLink)
+		isDuplicate := readFile(true, ShortLink, isAutoGenerateShortLink)
 		if isDuplicate {
-			fmt.Println("Your short link already exist")
+			fmt.Println(ErrShortLinkExist)
 			os.Exit(1)
 		}
-		//give whitespace
-		result := fmt.Sprintf("%-"+strconv.Itoa(len(ShortLink)+10)+"v%s\n", "/"+ShortLink, LongURL)
-		readF, err := os.Open(viper.GetString("app.path") + "/_redirects")
+
+		err = updateRedirectFile()
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		scanner := bufio.NewScanner(readF)
-		currentContents := ""
-		for scanner.Scan() {
-			// adjust the whitespace
-			tmp := scanner.Text()
-			split := strings.Fields(tmp)
-			addLength := (len(ShortLink) + 10) - len(split[0])
-			new := fmt.Sprintf("%-"+strconv.Itoa(len(split[0])+addLength)+"v%s\n", split[0], split[1])
-			currentContents += new
-		}
-		readF.Close()
-		writeF, err := os.OpenFile(viper.GetString("app.path")+"/_redirects", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		if _, err = writeF.Write([]byte(result + currentContents)); err != nil {
-			panic(err)
-		}
-		writeF.Close()
-		pushCommand := `cd ` + viper.GetString("app.path") + ` && git add _redirects && git commit -m "add /` + ShortLink + `" && git push origin master`
-		var pushCmd *exec.Cmd
-		var stdout, stderr bytes.Buffer
-		if runtime.GOOS == "windows" {
-			pushCmd = exec.Command("cmd", "/C", pushCommand)
-		} else {
-			pushCmd = exec.Command("bash", "-c", pushCommand)
-		}
-		pushCmd.Stdout = &stdout
-		pushCmd.Stderr = &stderr
-		err = pushCmd.Run()
-		if err != nil {
-			fmt.Println(err)
-		}
-		out := stdout.String() + stderr.String()
-		fmt.Println(out + "\n")
+
+		pushToGitRepo()
+
 		fmt.Println("/" + ShortLink + " -> " + LongURL)
 	},
 }
@@ -157,7 +123,116 @@ func init() {
 	// addCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
-func generateShortLink(n int) string {
+func validateParam(args []string) (err error) {
+	LongURL = args[0]
+	if !isValidURL(LongURL) {
+		err = errors.New(ErrInvalidURL)
+		return
+	}
+	if !checkAppDir() {
+		err = errors.New(ErrRedirectFileNotFound)
+	}
+
+	return
+}
+
+func generateShortLink(args []string) (isAutoRegenerateLink bool, err error) {
+	isAutoRegenerateLink = false
+	if len(args) > 1 {
+		if !isAlphaNum(args[1]) {
+			err = errors.New(ErrAlphanumericOnly)
+			return
+		}
+		ShortLink = args[1]
+	} else {
+		linkLength = 5
+		if viper.GetInt("shortlink.length") != 0 {
+			linkLength = viper.GetInt("shortlink.length")
+		}
+		ShortLink = randomizeShortLink(linkLength)
+		isAutoRegenerateLink = true
+	}
+
+	return
+}
+
+func updateRedirectFile() (err error) {
+	//give whitespace
+
+	// read the _redirects file
+	readF, err := os.Open(viper.GetString("app.path") + "/_redirects")
+	if err != nil {
+		return
+	}
+	scanner := bufio.NewScanner(readF)
+	currentFileContents := []string{}
+	newFileContents := ""
+	// find the longest short link
+	line := 0
+	longestShortLink := 0
+	for scanner.Scan() {
+		line++
+		// adjust the whitespace
+		tmp := scanner.Text()
+		split := strings.Fields(tmp)
+		if len(split) < 2 {
+			err = fmt.Errorf(ErrNoWhitespaceAtLine, line)
+			return
+		}
+		shortLink := split[0]
+		if len(shortLink) > longestShortLink {
+			longestShortLink = len(shortLink)
+		}
+		currentFileContents = append(currentFileContents, tmp)
+	}
+	readF.Close()
+
+	totalLength := longestShortLink + AdditionalWhitespaceLength
+	newEntry := fmt.Sprintf("%-"+strconv.Itoa(totalLength)+"v%s\n", "/"+ShortLink, LongURL)
+	newFileContents += newEntry
+
+	for _, c := range currentFileContents {
+		split := strings.Fields(c)
+		shortLink := split[0]
+		longLink := split[1]
+		new := fmt.Sprintf("%-"+strconv.Itoa(totalLength)+"v%s\n", shortLink, longLink)
+		newFileContents += new
+	}
+
+	writeF, err := os.OpenFile(viper.GetString("app.path")+"/_redirects", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	if err != nil {
+		return
+	}
+	if _, err = writeF.Write([]byte(newFileContents)); err != nil {
+		panic(err)
+	}
+	writeF.Close()
+
+	return
+}
+
+func pushToGitRepo() (err error) {
+	pushCommand := `cd ` + viper.GetString("app.path") + ` && git add _redirects && git commit -m "add /` + ShortLink + `" && git push origin master`
+	var pushCmd *exec.Cmd
+	var stdout, stderr bytes.Buffer
+	if runtime.GOOS == "windows" {
+		pushCmd = exec.Command("cmd", "/C", pushCommand)
+	} else {
+		pushCmd = exec.Command("bash", "-c", pushCommand)
+	}
+	pushCmd.Stdout = &stdout
+	pushCmd.Stderr = &stderr
+	err = pushCmd.Run()
+	if err != nil {
+		fmt.Println(err)
+	}
+	out := stdout.String() + stderr.String()
+	fmt.Println(out + "\n")
+
+	return
+}
+
+func randomizeShortLink(n int) string {
 	b := make([]rune, n)
 	for i := range b {
 		b[i] = letters[rand.Intn(len(letters))]
